@@ -1,1 +1,26 @@
-Esto es un proyecto, jajajaj.
+El vector de argumentos sera asi:
+argv[1] archivo de entrada
+     2  archivo de salida
+     3  numero de iteraciones
+     4  delta t
+
+El formato del archivo de entrada sera:
+
+nombre_cuerpo	masa	x	y	z	vx	vy	vz
+
+El formato del archivo de salida sera:
+
+tiempo 0
+cuerpo1	x	y	z	vx	vy	vz
+cuerpo2	x	y	z	vx	vy	vz
+...
+
+tiempo1
+cuerpo1	x	y	z	vx	vy	vz
+
+Cargar los datos iniciales: Octavio
+
+Contenido de los hilos: Ricardo
+
+Hacer el archivo de salida y main: Ernesto
+
