@@ -4,17 +4,22 @@ particulas.c
 */
 #include <stdio.h>
 #include <stdlib.h>
- #include <string.h>
+#include <string.h>
 #include <pthread.h>
+#include <math.h>
+
+/*Constante gravitacional (depende de las unidades a usar)*/
+#define const_G 1
 
 long lTam = 1000;
 int  iHilos;
  
 /* Datos compartidos */
-int *a;                   /* arreglo de numeros a sumar */
+int *a;                    /* arreglo de numeros a sumar */
 int indice_global = 0;     /* indice global */
-unsigned long suma = 0;              /* resultado final, también utilizado por los esclavos */
+unsigned long suma = 0;    /* resultado final, también utilizado por los esclavos */
 pthread_mutex_t mutex1;    /* variable de bloqueo mutuamente exclusiva */
+static double dt;          /* Declaracion de delta t */
  
 
  typedef struct {
@@ -26,6 +31,57 @@ pthread_mutex_t mutex1;    /* variable de bloqueo mutuamente exclusiva */
   double vx;
   double vy;
   double vz;}CUERPO; 
+
+///////////////////////////////////////////////////////////
+/*Funciones que sirven para hacer el calculo de los pasos*/
+///////////////////////////////////////////////////////////
+
+///////////////////////////////////////////////////////////////
+/*Funcion que saca la distancia al cuadrado entre dos cuerpos*/
+///////////////////////////////////////////////////////////////
+double dist2(CUERPO cuerpo1, CUERPO cuerpo2){
+  return pow(cuerpo2.x-cuerpo1.x,2)+pow(cuerpo2.y-cuerpo1.y,2)+pow(cuerpo2.z-cuerpo1.z,2);
+}
+
+////////////////////////////////////////////////////////////////////////////////////////////////////
+/*Funcion que calcula el siguiente paso del cuerpo n en funcion de todas las posiciones anteriores*/
+/*para la particula i. Requiere implicitamente del numero N de particulas y del incremento dt     */
+////////////////////////////////////////////////////////////////////////////////////////////////////
+void trayectoria(CUERPO pt0[0], CUERPO *pt1, int i){
+  int j;
+  double m_r3;
+
+  pt1->vx*=0;  //Inicializa en ceros para poder hacer la suma de las fuerzas
+  pt1->vy*=0;  //una por una.
+  pt1->vz*=0;  //
+
+  //Suma de fuerzas particula por particula, componente a componente
+  for( j=0 ; j<N ; j++){
+    if(j!=i){
+      m_r3=pt0[j].masa/pow(dist2(pt0[i],pt0[j]),1.5);
+      pt1->vx+=m_r3*(pt0[j].x-pt0[i].x);
+      pt1->vy+=m_r3*(pt0[j].y-pt0[i].y);
+      pt1->vz+=m_r3*(pt0[j].z-pt0[i].z);
+    }
+  }
+  
+  //Multiplicacion por G y dt
+  pt1->vx*=const_G*dt;
+  pt1->vy*=const_G*dt;
+  pt1->vz*=const_G*dt;
+
+  //Se le agregan las velocidades del paso temporal anterior
+  pt1->vx+=pt0[i].vx;
+  pt1->vy+=pt0[i].vy;
+  pt1->vz+=pt0[i].vz;
+
+  //Se modifican las posiciones 
+  pt1->x=pt0[i].x+pt0[i].vx*dt;
+  pt1->y=pt0[i].y+pt0[i].vy*dt;
+  pt1->z=pt0[i].z+pt0[i].vz*dt;
+}
+
+
 
 void *esclavo (void *ignorado)  /* Hilos esclavos */
 {
@@ -71,21 +127,27 @@ void** arreglo_insertar (void **arreglo, int *tamano, void *dato)
 
 main (int argc, char* argv[])
 {
-  int i,tamano=0,N=0;
-char campo[20];
-double tiempo=0;
-CUERPO *particula,**arreglo_particulas=NULL;
+  int i,tamano=0,N=0; //N es el numero de cuerpos
+  char campo[20];
+  double tiempo=0;
+  CUERPO *particula,**arreglo_particulas=NULL;
   pthread_t *thread;                 /* hilos */
   pthread_mutex_init (&mutex1, NULL);   /* inicializa el mutex */
   FILE *farch_in,*farch_out;
 
-   if (argc != 5){
-     fprintf(stderr,"Uso %s arch_in arch_out iteraciones delta_t\n", argv[0]);
+  if (argc != 5){
+    fprintf(stderr,"Uso %s arch_in arch_out iteraciones delta_t\n", argv[0]);
     exit(1);
-	}
+  }
+
+  /*Aqui se obtiene dt de los argumentos de entrada*/
+  if (dt=atof(argv[4] <= 0){
+      fprintf(stderr,"delta_t debe ser un numero mayor a cero, usted puso %s\n",argv[4]);
+      exit(1);
+    }
+
 ///////////////////////////////// AQUI SE LEE DEL ARCHIVO DE ENTRADA //////////////////////////////////////////
-    if (farch_in = fopen(argv[1], "r"))
-{
+  if (farch_in = fopen(argv[1], "r")){
 //        datos_in(farch_in,**particulas);
 
 while (leer_campo (farch_in, campo))
@@ -160,6 +222,3 @@ for(i=0;i<N;i++){
  free(particula);
  free(arreglo_particulas);
 }
-
-
-
