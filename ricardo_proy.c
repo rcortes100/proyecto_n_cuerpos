@@ -3,21 +3,23 @@
 
 #define const_G 1
 
-struct cuerpo {
-	double x;
-	double y;
-	double z;
-	double vx;
-	double vy;
-	double vz;};
+typedef struct {
+  char* nombre;
+  double masa;
+  double x;
+  double y;
+  double z;
+  double vx;
+  double vy;
+  double vz;}CUERPO;
 
 static double dt=0.001;
-static unsigned int num_cuerpos=3;
+static unsigned int N=3;
 
 ///////////////////////////////////////////////////////////////
 /*Funcion que saca la distancia al cuadrado entre dos cuerpos*/
 ///////////////////////////////////////////////////////////////
-double dist2(struct cuerpo cuerpo1, struct cuerpo cuerpo2){
+double dist2(CUERPO cuerpo1, CUERPO cuerpo2){
   return pow(cuerpo2.x-cuerpo1.x,2)+pow(cuerpo2.y-cuerpo1.y,2)+pow(cuerpo2.z-cuerpo1.z,2);
 }
 
@@ -25,7 +27,7 @@ double dist2(struct cuerpo cuerpo1, struct cuerpo cuerpo2){
 /*Funcion que calcula el siguiente paso del cuerpo n en funcion de todas las posiciones anteriores*/
 /*para la particula i.                                                                            */
 ////////////////////////////////////////////////////////////////////////////////////////////////////
-void trayectoria(struct cuerpo pt0[0], struct cuerpo *pt1, double masa[0], int i){
+void trayectoria(CUERPO pt0[0], CUERPO *pt1, int i){
   int j;
   double m_r3;
 
@@ -34,9 +36,9 @@ void trayectoria(struct cuerpo pt0[0], struct cuerpo *pt1, double masa[0], int i
   pt1->vz*=0;  //
 
   //Suma de fuerzas particula por particula, componente a componente
-  for( j=0 ; j<num_cuerpos ; j++){
+  for( j=0 ; j<N ; j++){
     if(j!=i){
-      m_r3=masa[j]/pow(dist2(pt0[i],pt0[j]),1.5);
+      m_r3=pt0[j].masa/pow(dist2(pt0[i],pt0[j]),1.5);
       pt1->vx+=m_r3*(pt0[j].x-pt0[i].x);
       pt1->vy+=m_r3*(pt0[j].y-pt0[i].y);
       pt1->vz+=m_r3*(pt0[j].z-pt0[i].z);
@@ -60,11 +62,11 @@ void trayectoria(struct cuerpo pt0[0], struct cuerpo *pt1, double masa[0], int i
 }
 
 void main(){
-  struct cuerpo arreglo[3];
-  struct cuerpo uno={1,2,3,4,5,6};
-  struct cuerpo dos={6,5,3,2,4,5};
-  struct cuerpo tres={0,1,32,2,3,4};
-  struct cuerpo final;
+  CUERPO arreglo[3];
+  CUERPO uno={1,2,3,4,5,6};
+  CUERPO dos={6,5,3,2,4,5};
+  CUERPO tres={0,1,32,2,3,4};
+  CUERPO final;
   double vec_de_masas[3]={100,1,5};
   arreglo[0]=uno;
   arreglo[1]=dos;
