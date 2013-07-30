@@ -13,8 +13,8 @@ typedef struct {
   double vy;
   double vz;}CUERPO;
 
-static double dt=0.001;
-static unsigned int N=3;
+static double dt=0.001; //-->>QUE ESTA VARIABLE LA LEA DESDE argv[4]
+static unsigned int N=3; //-->>QUE ESTA VARIABLE LA LEA AL CONTAR LOS N CUERPOS
 
 ///////////////////////////////////////////////////////////////
 /*Funcion que saca la distancia al cuadrado entre dos cuerpos*/
@@ -27,7 +27,7 @@ double dist2(CUERPO cuerpo1, CUERPO cuerpo2){
 /*Funcion que calcula el siguiente paso del cuerpo n en funcion de todas las posiciones anteriores*/
 /*para la particula i.                                                                            */
 ////////////////////////////////////////////////////////////////////////////////////////////////////
-void trayectoria(CUERPO pt0[0], CUERPO *pt1, int i){
+void trayectoria(CUERPO pt0[0], CUERPO *pt1, int i){ //QUE i LO OBTENGA DEL INDICE DEL HILO
   int j;
   double m_r3;
 
