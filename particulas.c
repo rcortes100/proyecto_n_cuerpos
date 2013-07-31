@@ -6,6 +6,12 @@ particulas.c
 #include <stdlib.h>
  #include <string.h>
 #include <pthread.h>
+#include <math.h>
+#include <fcntl.h>
+
+
+/*Constante gravitacional (depende de las unidades a usar)*/
+#define const_G 10
 
  typedef struct {
   char* nombre;
@@ -34,12 +40,74 @@ int indice_global = 0;     /* indice global */
 unsigned long suma = 0;              /* resultado final, también utilizado por los esclavos */
 pthread_mutex_t mutex1;    /* variable de bloqueo mutuamente exclusiva */
 DATOS DATCICLO;
- 
+double delta_t; /* Declaracion de delta t */
+off_t offset; //ofset para el archivo de salida
+
+///////////////////////////////////////////////////////////
+/*Funciones que sirven para hacer el calculo de los pasos*/
+///////////////////////////////////////////////////////////
+
+///////////////////////////////////////////////////////////////
+/*Funcion que saca la distancia al cuadrado entre dos cuerpos
+///////////////////////////////////////////////////////////////
+double dist2(CUERPO *cuerpo1, CUERPO *cuerpo2){
+  return pow(DATCICLO.C_inicial[j]->x-DATCICLO.C_inicial[my_id]->x,2)+pow(DATCICLO.C_inicial[j]->y-DATCICLO.C_inicial[my_id]->y,2)+pow(DATCICLO.C_inicial[j]->z-DATCICLO.C_inicial[my_id]->z,2);
+}
+*/
+////////////////////////////////////////////////////////////////////////////////////////////////////
+/*Funcion que calcula el siguiente paso del cuerpo n en funcion de todas las posiciones anteriores*/
+/*para la particula i. Requiere implicitamente del numero N de particulas y del incremento delta_t */
+////////////////////////////////////////////////////////////////////////////////////////////////////
+//void trayectoria(CUERPO pt0[0], CUERPO *DATCICLO, int i){
+void *trayectoria(void *particula){
+  int j;
+  double m_r3,dist2;
+  long my_id= (long)particula;
+
+  DATCICLO.C_final[my_id]->vx=0; //Inicializa en ceros para poder hacer la suma de las fuerzas
+  DATCICLO.C_final[my_id]->vy=0; //una por una.
+  DATCICLO.C_final[my_id]->vz=0; //
+
+  //Suma de fuerzas particula por particula, componente a componente ( iHilios= N por las condiciones del proyecto)
+  for( j=0 ; j<iHilos ; j++){
+    if(j!=my_id){
+      dist2=pow(DATCICLO.C_inicial[j]->x-DATCICLO.C_inicial[my_id]->x,2)+pow(DATCICLO.C_inicial[j]->y-DATCICLO.C_inicial[my_id]->y,2)+pow(DATCICLO.C_inicial[j]->z-DATCICLO.C_inicial[my_id]->z,2);
+      m_r3=DATCICLO.C_inicial[j]->masa/pow(dist2,1.5);
+      DATCICLO.C_final[my_id]->vx+=m_r3*(DATCICLO.C_inicial[j]->x-DATCICLO.C_inicial[my_id]->x);
+      DATCICLO.C_final[my_id]->vy+=m_r3*(DATCICLO.C_inicial[j]->y-DATCICLO.C_inicial[my_id]->y);
+      DATCICLO.C_final[my_id]->vz+=m_r3*(DATCICLO.C_inicial[j]->z-DATCICLO.C_inicial[my_id]->z);
+    }
+  }
+
+  //Multiplicacion por G y delta_t
+  DATCICLO.C_final[my_id]->vx*=const_G*delta_t;
+  DATCICLO.C_final[my_id]->vy*=const_G*delta_t;
+  DATCICLO.C_final[my_id]->vz*=const_G*delta_t;
+  //Se le agregan las velocidades del paso temporal anterior
+  DATCICLO.C_final[my_id]->vx+=DATCICLO.C_inicial[my_id]->vx;
+  DATCICLO.C_final[my_id]->vy+=DATCICLO.C_inicial[my_id]->vy;
+  DATCICLO.C_final[my_id]->vz+=DATCICLO.C_inicial[my_id]->vz;
+  //Se modifican las posiciones
+  DATCICLO.C_final[my_id]->x=DATCICLO.C_inicial[my_id]->x+DATCICLO.C_inicial[my_id]->vx*delta_t;
+  DATCICLO.C_final[my_id]->y=DATCICLO.C_inicial[my_id]->y+DATCICLO.C_inicial[my_id]->vy*delta_t;
+  DATCICLO.C_final[my_id]->z=DATCICLO.C_inicial[my_id]->z+DATCICLO.C_inicial[my_id]->vz*delta_t;
+
+DATCICLO.C_final[my_id]->masa=DATCICLO.C_inicial[my_id]->masa;
+DATCICLO.C_final[my_id]->nombre=DATCICLO.C_inicial[my_id]->nombre;
+}
+
+///////////////////////////////////////////TERMINAN FUNCIONES DE CALCULO///////////////////////////////
+
+
+
+
 void *esclavo (void *ignorado)  /* Hilos esclavos */
 {
+  long my_id= (long)ignorado;
   int indice_local;
   unsigned long suma_parcial = 0;
- 
+
+ printf("%f\n",my_id*delta_t);
   do {
           pthread_mutex_lock (&mutex1);  /* obtiene el siguiente indice del arreglo */
           indice_local =  indice_global; /* Lee el indice actual y lo guarda */
@@ -76,20 +144,63 @@ void** arreglo_insertar (void **arreglo, int *tamano, void *dato)
     return arreglo;
 }
 
+void imprimir (FILE *farch_out,double tiempo){
+int i;
+fprintf(farch_out,"tiempo %f\n", tiempo);
+fseek(farch_out,0L,SEEK_CUR);
+offset=lseek(fileno(farch_out), 0L, SEEK_CUR);
+//printf("ofimpresion:%i\n",offset);
+///Recordamos que iHilos es igual a N////
+for(i=0;i<iHilos;i++){
+	fprintf(farch_out,"%s %f %f %f %f %f %f %f\n",DATCICLO.C_final[i]->nombre,DATCICLO.C_final[i]->masa,DATCICLO.C_final[i]->x,DATCICLO.C_final[i]->y,DATCICLO.C_final[i]->z,DATCICLO.C_final[i]->vx,DATCICLO.C_final[i]->vy,DATCICLO.C_final[i]->vz);
+}
+//printf("of1:%i\n",offset);
+}
+
+
+void leer(FILE *farch_out){
+int i;
+double z;
+char campo[200];
+//printf("of2:%i\n",offset);
+fseek(farch_out,offset,SEEK_SET);
+//printf("of3:%i\n",offset);
+for(i=0;i<iHilos;i++){
+leer_campo (farch_out, campo);
+DATCICLO.C_inicial[i]->nombre=strdup (campo);
+leer_campo (farch_out, campo);
+DATCICLO.C_inicial[i]->masa=atof(campo);
+leer_campo (farch_out, campo);
+DATCICLO.C_inicial[i]->x=atof(campo);
+leer_campo (farch_out, campo);
+DATCICLO.C_inicial[i]->y=atof(campo);
+leer_campo (farch_out, campo);
+DATCICLO.C_inicial[i]->z=atof(campo);
+leer_campo (farch_out, campo);
+DATCICLO.C_inicial[i]->vx=atof(campo);
+leer_campo (farch_out, campo);
+DATCICLO.C_inicial[i]->vy=atof(campo);
+leer_campo (farch_out, campo);
+DATCICLO.C_inicial[i]->vz=atof(campo);
+}
+}
 
 main (int argc, char* argv[])
 {
   int t,iteraciones,tamano=0,N=0;
-char campo[20];
-double tiempo=0,delta_t;
+char campo[200];
+char *salida;
+double tiempo=0;
 long i;
+long temporal;
+
 CUERPO **arreglo_inicial=NULL, **arreglo_final=NULL;
-CUERPO *particula;
+CUERPO *particula,*particula2;
   pthread_t *thread;                 /* hilos */
   pthread_attr_t attr;
   pthread_mutex_init (&mutex1, NULL);   /* inicializa el mutex */
   FILE *farch_in,*farch_out;
-
+salida=argv[2];
    if (argc != 5){
      fprintf(stderr,"Uso %s arch_in arch_out iteraciones delta_t\n", argv[0]);
     exit(1);
@@ -97,6 +208,11 @@ CUERPO *particula;
 
 iteraciones=atoi(argv[3]);
 delta_t=atof(argv[4]);
+  /*Aqui se obtiene delta_t de los argumentos de entrada*/
+  if (delta_t <= 0){
+      fprintf(stderr,"delta_t debe ser un numero mayor a cero, usted puso %s\n",argv[4]);
+      exit(1);
+    } 
 
 ///////////////////////////////// AQUI SE LEE DEL ARCHIVO DE ENTRADA //////////////////////////////////////////
     if (farch_in = fopen(argv[1], "r"))
@@ -106,6 +222,7 @@ delta_t=atof(argv[4]);
 while (leer_campo (farch_in, campo))
         {
             particula = (CUERPO*) malloc (sizeof (CUERPO));
+            particula2 = (CUERPO*) malloc (sizeof (CUERPO));
             particula->nombre = strdup (campo);
             leer_campo (farch_in, campo);
             particula->masa = atof (campo);
@@ -122,6 +239,16 @@ while (leer_campo (farch_in, campo))
             leer_campo (farch_in, campo);
             particula->vz = atof (campo);
             arreglo_inicial = (CUERPO**) arreglo_insertar ((void**)arreglo_inicial, &tamano, particula);
+	    particula2->nombre = particula->nombre;
+	    particula2->masa = particula->masa;
+	    particula2->x = particula->x;
+	    particula2->y = particula->y;
+	    particula2->z = particula->z;
+	    particula2->vx = particula->vx;
+	    particula2->vy = particula->vy;
+	    particula2->vz = particula->vz;
+	    tamano--;
+            arreglo_final = (CUERPO**) arreglo_insertar ((void**)arreglo_final, &tamano, particula2);
 //	    printf("%i %s\n",N,arreglo_inicial[N]->nombre);
 	    N++;
         }
@@ -129,6 +256,7 @@ while (leer_campo (farch_in, campo))
 	printf("Numero de particulas: %i\n",N);
 	iHilos=N;
 	DATCICLO.C_inicial=arreglo_inicial;
+	DATCICLO.C_final=arreglo_final;
 //	    printf("%i %s\n",N-1,arreglo_inicial[N-2]->nombre);
 //	    printf("%i %f\n",N-1,arreglo_inicial[N-2]->vz);
 
@@ -145,64 +273,49 @@ while (leer_campo (farch_in, campo))
 //Se crean aloja el espacio para los N hilos
   thread = malloc(iHilos*sizeof(pthread_t));
 
+/// SE ALOJA LA MEMORIA PARA LA CONFIGURACION FINAL
+
+
+
    /* Initialize and set thread detached attribute */
    pthread_attr_init(&attr);
    pthread_attr_setdetachstate(&attr, PTHREAD_CREATE_JOINABLE);
 /////////////////////////////////////////////////// AQUI VA EL CALCULO //////////////////////////////////// 
-  for (i=0;i<lTam;i++)                /* inicializa a[] */
-          a[i]=i+1;
+///////////////////// SALIDA/////////////////////////
+farch_out = fopen("DEFAULT", "w+");
+/*
+if ((offset = fseek(farch_out, 0L, SEEK_END)) == -1)
+      perror("lseek() error");
+printf("of0:%i %i\n",offset,temporal);
+*/
+///imprimimos para t=0//
+t=0;
+imprimir(farch_out,tiempo);
  ////////////////CICLOS EN EL TIEMPO///////////////////
-for(t=0;t<=iteraciones;t++){
+for(t=1;t<=iteraciones;t++){
+leer(farch_out);
 tiempo=t*delta_t;
   for (i=0;i<iHilos;i++)   /* crea los hilos */  ///ESCLAVO DEBE SER LA FUNCION DE RICARDO///
-          if (pthread_create(&thread[i], &attr, esclavo, (void *)i) != 0)     
+          if (pthread_create(&thread[i], &attr, trayectoria, (void *)i) != 0)     
                   perror ("pthread_create");
  
   for (i=0;i<iHilos;i++)             /* Une los hilos */
           if (pthread_join(thread[i],NULL)!=0)
                   perror ("pthread_join");
-printf("TIEMPO: %f\n",tiempo);
+////////IMPRESION A ARCHIVO////////
+imprimir(farch_out,tiempo);
+////////////////////////////////////////////////
+//printf("TIEMPO: %f\n",tiempo);
 }
-//////////////////////////////////////////////////////////////////////
 
- //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-  printf ("La suma de 1 hasta %lu es %lu\n", (unsigned long) lTam, suma);
-///////////////////// SALIDA/////////////////////////
-   if (farch_out = fopen(argv[2], "w"))
-{
-//        datos_in(farch_in,**particulas);
-	fprintf(farch_out,"tiempo %f\n", tiempo);
-for(i=0;i<N;i++){
-	fprintf(farch_out,"%s %f %f %f %f %f %f %f\n",arreglo_inicial[i]->nombre,arreglo_inicial[i]->masa,arreglo_inicial[i]->x,arreglo_inicial[i]->y,arreglo_inicial[i]->z,arreglo_inicial[i]->vx,arreglo_inicial[i]->vy,arreglo_inicial[i]->vz);
-//printf("%i\n",i);
-//printf("%s\n",arreglo_inicial[5]->nombre);
-}
-        fclose(farch_out);
-}
-    else{
-      printf("No se puede abrir el archivo\n");
-}
-////////////////////////////////////////////////////////////
-/*
-///////////////////// SALIDA/////////////////////////
-   if (farch_out = fopen(argv[3], "w"))
-{
-//        datos_in(farch_in,**particulas);
-	fprintf(farch_out,"tiempo %f\n", tiempo);
-for(i=0;i<N;i++){
-	fprintf(farch_out,"%s %f %f %f %f %f %f %f\n",DATCICLO.C_inicial[i]->nombre,DATCICLO.C_inicial[i]->masa,DATCICLO.C_inicial[i]->x,DATCICLO.C_inicial[i]->y,DATCICLO.C_inicial[i]->z,DATCICLO.C_inicial[i]->vx,DATCICLO.C_inicial[i]->vy,DATCICLO.C_inicial[i]->vz);
-//printf("%i\n",i);
-//printf("%s\n",arreglo_inicial[5]->nombre);
-}
-        fclose(farch_out);
-}
-    else{
-      printf("No se puede abrir el archivo\n");
-}
-////////////////////////////////////////////////////////////
-*/
+printf("Tiempo final: %f\n",tiempo);
+//////////////////////////////////////////////////////////////////////
+fclose(farch_out);
+
  free(particula);
+ free(particula2);
  free(arreglo_inicial);
+ free(arreglo_final);
 }
 
 
