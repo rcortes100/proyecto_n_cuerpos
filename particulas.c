@@ -120,9 +120,17 @@ offset=lseek(fileno(farch_out), 0L, SEEK_CUR);
 //printf("ofimpresion:%i\n",offset);
 ///Recordamos que iHilos es igual a N////
 for(i=0;i<iHilos;i++){
-	fprintf(farch_out,"%s\t%lf\t%lf\t%lf\t%lf\t%lf\t%lf\t%lf\n",DATCICLO.C_final[i]->nombre,DATCICLO.C_final[i]->masa,DATCICLO.C_final[i]->x,DATCICLO.C_final[i]->y,DATCICLO.C_final[i]->z,DATCICLO.C_final[i]->vx,DATCICLO.C_final[i]->vy,DATCICLO.C_final[i]->vz);
+	fprintf(farch_out,"%s\t%g\t%g\t%g\t%g\t%g\t%g\t%g\n",DATCICLO.C_final[i]->nombre,DATCICLO.C_final[i]->masa,DATCICLO.C_final[i]->x,DATCICLO.C_final[i]->y,DATCICLO.C_final[i]->z,DATCICLO.C_final[i]->vx,DATCICLO.C_final[i]->vy,DATCICLO.C_final[i]->vz);
 }
-//printf("of1:%i\n",offset);
+}
+
+void imprimir_jmol(FILE *jFile){
+int i;
+fprintf(jFile,"%i\n", iHilos);
+fprintf(jFile,"%i\n", iHilos);
+for(i=0;i<iHilos;i++){
+fprintf(jFile,"H \t%g\t%g\t%g\n",DATCICLO.C_final[i]->x,DATCICLO.C_final[i]->y,DATCICLO.C_final[i]->z);
+}
 }
 
 
@@ -166,7 +174,7 @@ CUERPO *particula,*particula2;
   pthread_t *thread;                 /* hilos */
   pthread_attr_t attr;
 //  pthread_mutex_init (&mutex1, NULL);   /* inicializa el mutex */
-  FILE *farch_in,*farch_out;
+  FILE *farch_in,*farch_out, *jFile;
 salida=argv[2];
    if (argc != 5){
      fprintf(stderr,"Uso %s arch_in arch_out iteraciones delta_t\n", argv[0]);
@@ -244,6 +252,7 @@ while (leer_campo (farch_in, campo))
 /////////////////////////////////////////////////// AQUI VA EL CALCULO //////////////////////////////////// 
 ///////////////////// SALIDA/////////////////////////
 farch_out = fopen(argv[2], "w+");
+jFile = fopen("EVOLUCION.xyz", "w");
 /*
 if ((offset = fseek(farch_out, 0L, SEEK_END)) == -1)
       perror("lseek() error");
@@ -252,6 +261,7 @@ printf("of0:%i %i\n",offset,temporal);
 ///imprimimos para t=0//
 t=0;
 imprimir(farch_out,tiempo);
+imprimir_jmol(jFile);
  ////////////////CICLOS EN EL TIEMPO///////////////////
 for(t=1;t<=iteraciones;t++){
 leer(farch_out);
@@ -265,6 +275,7 @@ tiempo=t*delta_t;
                   perror ("pthread_join");
 ////////IMPRESION A ARCHIVO////////
 imprimir(farch_out,tiempo);
+imprimir_jmol(jFile);
 ////////////////////////////////////////////////
 //printf("TIEMPO: %f\n",tiempo);
 }
@@ -272,6 +283,7 @@ imprimir(farch_out,tiempo);
 printf("Tiempo final: %f\n",tiempo);
 //////////////////////////////////////////////////////////////////////
 fclose(farch_out);
+fclose(jFile);
 
  free(particula);
  free(particula2);
