@@ -4,7 +4,7 @@
 #define const_G 1
 
 typedef struct {
-  char* nombre;
+  char nombre[20];
   double masa;
   double x;
   double y;
@@ -14,7 +14,7 @@ typedef struct {
   double vz;}CUERPO;
 
 static double dt=0.001; //-->>QUE ESTA VARIABLE LA LEA DESDE argv[4]
-static unsigned int N=3; //-->>QUE ESTA VARIABLE LA LEA AL CONTAR LOS N CUERPOS
+static unsigned int N=10; //-->>QUE ESTA VARIABLE LA LEA AL CONTAR LOS N CUERPOS
 
 ///////////////////////////////////////////////////////////////
 /*Funcion que saca la distancia al cuadrado entre dos cuerpos*/
@@ -62,12 +62,34 @@ void trayectoria(CUERPO pt0[0], CUERPO *pt1, int i){ //QUE i LO OBTENGA DEL INDI
 }
 
 void main(){
-  CUERPO arreglo[3];
-  CUERPO uno={1,2,3,4,5,6};
-  CUERPO dos={6,5,3,2,4,5};
-  CUERPO tres={0,1,32,2,3,4};
-  CUERPO final;
-  double vec_de_masas[3]={100,1,5};
+  FILE* entrada;
+  FILE* salida;
+  CUERPO arreglo01[N];
+  CUERPO arreglo02[N];
+  char cadena[20];
+  int i;
+  float tiempo=0;
+
+  entrada=fopen("muestra.txt","r");
+  salida=fopen("salida.txt","w");
+  for(i=0;i<N;i++){
+    fscanf(entrada,"%s\t%lf\t%lf\t%lf\t%lf\t%lf\t%lf\t%lf",arreglo01[i].nombre,&arreglo01[i].masa,&arreglo01[i].x,&arreglo01[i].y,&arreglo01[i].z,&arreglo01[i].vx,&arreglo01[i].vy,&arreglo01[i].vz);
+//  printf("%s %f %f %f %f %f %f %f\n",arreglo01[i].nombre,arreglo01[i].masa,arreglo01[i].x,arreglo01[i].y,arreglo01[i].z,arreglo01[i].vx,arreglo01[i].vy,arreglo01[i].vz);
+  }
+  fclose(entrada);
+  
+  tiempo=dt*10;
+  while(tiempo>=0){
+    for(i=0;i<N;i++){
+      trayectoria(arreglo01, &arreglo02[i], i);
+      fprintf(salida,"%lf\t%lf\t%lf\t%lf\t%lf\t%lf\t%lf\n",dt*10-tiempo,arreglo02[i].x,arreglo02[i].y,arreglo02[i].z,arreglo02[i].vx,arreglo02[i].vy,arreglo02[i].vz);}
+    tiempo=tiempo-dt;
+  }
+  fclose(salida);
+
+
+}
+/*
   arreglo[0]=uno;
   arreglo[1]=dos;
   arreglo[2]=tres;
@@ -75,3 +97,4 @@ void main(){
   printf("%f\t%f\t%f\t%f\t%f\t%f\n",uno.x,uno.y,uno.z,uno.vx,uno.vy,uno.vz);
   printf("%f\t%f\n",arreglo[0].x,arreglo[1].x);
 }
+*/

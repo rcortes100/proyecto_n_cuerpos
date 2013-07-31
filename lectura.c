@@ -58,7 +58,7 @@ for(j=0; j<cont; j++){
 		fscanf(entrada, "%s[\t\n]", campo);
 		switch(i){
 			case 0 : //printf("campo= %s \n", campo);
-				 fijos[j].nomb_part= campo;
+				 fijos[j].nomb_part= strdup(campo); // si no se susa strdup no se conserva el nombre en la cadena y al final será igual que el ultimo dato "campo" que se haya escaneado
 				 //printf("la entrada es %s \n", fijos[j].nomb_part ); //probando el buffer
 				 break;
 				 //fgetc(entrada);

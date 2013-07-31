@@ -4,7 +4,7 @@ particulas.c
 */
 #include <stdio.h>
 #include <stdlib.h>
- #include <string.h>
+#include <string.h>
 #include <pthread.h>
 #include <math.h>
 #include <fcntl.h>
@@ -216,7 +216,7 @@ delta_t=atof(argv[4]);
 
 ///////////////////////////////// AQUI SE LEE DEL ARCHIVO DE ENTRADA //////////////////////////////////////////
     if (farch_in = fopen(argv[1], "r"))
-{
+      {
 //        datos_in(farch_in,**particulas);
 
 while (leer_campo (farch_in, campo))
