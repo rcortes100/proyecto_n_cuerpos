@@ -4,14 +4,14 @@ particulas.c
 */
 #include <stdio.h>
 #include <stdlib.h>
-#include <string.h>
+ #include <string.h>
 #include <pthread.h>
 #include <math.h>
 #include <fcntl.h>
 
 
 /*Constante gravitacional (depende de las unidades a usar)*/
-#define const_G 10
+#define const_G 1
 
  typedef struct {
   char* nombre;
@@ -32,13 +32,9 @@ typedef struct
  } DATOS;
 
 
-long lTam = 1000;
 int  iHilos;
 /* Datos compartidos */
-int *a;                   /* arreglo de numeros a sumar */
-int indice_global = 0;     /* indice global */
-unsigned long suma = 0;              /* resultado final, también utilizado por los esclavos */
-pthread_mutex_t mutex1;    /* variable de bloqueo mutuamente exclusiva */
+//pthread_mutex_t mutex1;    /* variable de bloqueo mutuamente exclusiva */
 DATOS DATCICLO;
 double delta_t; /* Declaracion de delta t */
 off_t offset; //ofset para el archivo de salida
@@ -99,34 +95,6 @@ DATCICLO.C_final[my_id]->nombre=DATCICLO.C_inicial[my_id]->nombre;
 ///////////////////////////////////////////TERMINAN FUNCIONES DE CALCULO///////////////////////////////
 
 
-
-
-void *esclavo (void *ignorado)  /* Hilos esclavos */
-{
-  long my_id= (long)ignorado;
-  int indice_local;
-  unsigned long suma_parcial = 0;
-
- printf("%f\n",my_id*delta_t);
-  do {
-          pthread_mutex_lock (&mutex1);  /* obtiene el siguiente indice del arreglo */
-          indice_local =  indice_global; /* Lee el indice actual y lo guarda */
-          indice_global++;
-          pthread_mutex_unlock (&mutex1);
- 
-          if (indice_local < lTam)
-                  suma_parcial += *(a+indice_local);
-  }
-  while (indice_local < lTam);
- 
- 
-  pthread_mutex_lock (&mutex1);   /* Agrega la suma parcial a la suma global */
-     suma += suma_parcial;
-  pthread_mutex_unlock(&mutex1);
- 
-  return (NULL);                      /* El hilo termina */
-}
-
 int leer_campo (FILE *archivo, char *campo)
 {
     fscanf (archivo, "%s[^\t\n\r]", campo);
@@ -152,7 +120,7 @@ offset=lseek(fileno(farch_out), 0L, SEEK_CUR);
 //printf("ofimpresion:%i\n",offset);
 ///Recordamos que iHilos es igual a N////
 for(i=0;i<iHilos;i++){
-	fprintf(farch_out,"%s %f %f %f %f %f %f %f\n",DATCICLO.C_final[i]->nombre,DATCICLO.C_final[i]->masa,DATCICLO.C_final[i]->x,DATCICLO.C_final[i]->y,DATCICLO.C_final[i]->z,DATCICLO.C_final[i]->vx,DATCICLO.C_final[i]->vy,DATCICLO.C_final[i]->vz);
+	fprintf(farch_out,"%s\t%lf\t%lf\t%lf\t%lf\t%lf\t%lf\t%lf\n",DATCICLO.C_final[i]->nombre,DATCICLO.C_final[i]->masa,DATCICLO.C_final[i]->x,DATCICLO.C_final[i]->y,DATCICLO.C_final[i]->z,DATCICLO.C_final[i]->vx,DATCICLO.C_final[i]->vy,DATCICLO.C_final[i]->vz);
 }
 //printf("of1:%i\n",offset);
 }
@@ -192,13 +160,12 @@ char campo[200];
 char *salida;
 double tiempo=0;
 long i;
-long temporal;
 
 CUERPO **arreglo_inicial=NULL, **arreglo_final=NULL;
 CUERPO *particula,*particula2;
   pthread_t *thread;                 /* hilos */
   pthread_attr_t attr;
-  pthread_mutex_init (&mutex1, NULL);   /* inicializa el mutex */
+//  pthread_mutex_init (&mutex1, NULL);   /* inicializa el mutex */
   FILE *farch_in,*farch_out;
 salida=argv[2];
    if (argc != 5){
@@ -216,7 +183,7 @@ delta_t=atof(argv[4]);
 
 ///////////////////////////////// AQUI SE LEE DEL ARCHIVO DE ENTRADA //////////////////////////////////////////
     if (farch_in = fopen(argv[1], "r"))
-      {
+{
 //        datos_in(farch_in,**particulas);
 
 while (leer_campo (farch_in, campo))
@@ -264,12 +231,6 @@ while (leer_campo (farch_in, campo))
     else{
       printf("No se puede abrir el archivo\n");
 }
-/////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-//  if (argc>2) {
-//     lTam = atol(argv[2]);
-//  }
- 
-  a = malloc(lTam*sizeof(int));
 //Se crean aloja el espacio para los N hilos
   thread = malloc(iHilos*sizeof(pthread_t));
 
@@ -282,7 +243,7 @@ while (leer_campo (farch_in, campo))
    pthread_attr_setdetachstate(&attr, PTHREAD_CREATE_JOINABLE);
 /////////////////////////////////////////////////// AQUI VA EL CALCULO //////////////////////////////////// 
 ///////////////////// SALIDA/////////////////////////
-farch_out = fopen("DEFAULT", "w+");
+farch_out = fopen(argv[2], "w+");
 /*
 if ((offset = fseek(farch_out, 0L, SEEK_END)) == -1)
       perror("lseek() error");
